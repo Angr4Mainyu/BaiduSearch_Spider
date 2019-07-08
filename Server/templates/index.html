@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}{{title}}{% endblock %}
+{% block content %}
+<div class="site-content">
+    <fieldset class="layui-elem-field layui-field-title">
+        <legend>搜索</legend>
+        <form class="layui-form" action="" onclick="return false">
+            <div class="layui-form-item">
+                <label class="layui-form-label">关键词</label>
+                <div class="layui-input-block">
+                    <input type="text" name="keyword" required lay-verify="required" placeholder="请输入关键词"
+                        autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit lay-filter="search"><i
+                            class="layui-icon">&#xe615;</i>立即榨取</button>
+                    <button type="reset" class="layui-btn layui-btn-primary"><i
+                            class="layui-icon">&#xe669;</i>重置</button>
+                </div>
+            </div>
+        </form>
+    </fieldset>
+    <div class="layui-progress layui-progress-big" lay-showpercent="true" lay-filter="loading" width="80%px" style="display:none">
+        <div class="layui-progress-bar layui-bg-orange" lay-percent="0%"></div>
+    </div>
+    <div class='layui-anim layui-anim-up' style="display:none;">
+        <fieldset class="layui-elem-field layui-field-title">
+            <legend>结果</legend>
+        </fieldset>
+        <table class="layui-table" id="result" lay-filter="result"></table>
+        <span></span>
+    </div>
+</div>
+<script type="text/html" id="toolbar">
+    <div class="layui-btn-container">
+      <button class="layui-btn layui-btn-sm" lay-event="download"><i class="layui-icon">&#xe601;</i>下载</button>
+    </div>
+  </script>
+
+<script>
+    layui.use(['form', 'table', 'element'], function () {
+        var form = layui.form,
+            table = layui.table,
+            element = layui.element;
+        $ = layui.jquery;
+        form.render();
+
+        function reload(keyword) {
+            tableIns = table.render({
+                elem: '#result',
+                height: 'full',
+                title: '查询结果',
+                url: 'api/spider',
+                id: 'result',
+                method: 'GET',
+                toolbar: '#toolbar',
+                page: false,
+                where: keyword,
+                cols: [[
+                    {
+                        field: 'title', title: '标题', sort: true, templet: d => {
+                            return '<a href="' + d.link + '" class="layui-table-link" target="_blank">' + d.title + '</a>'
+                        }
+                    },
+                    { field: 'brief', title: '摘要', sort: true },
+                    { field: 'time', title: '时间', sort: true },
+                ]],
+                done: function (res, curr, count) {
+                    if (res.code == 1) {
+                        layer.msg(res["msg"]);
+                        return false;
+                    }
+                }
+            });
+        }
+
+        form.on("submit(search)", function (data) {
+            data = data.field;
+            $('.layui-progress').show();
+            $('#result').parent().hide();
+            console.log(data);
+            // 加载结果
+            reload(data)
+            // 进度条效果
+            var n = 0, timer = setInterval(function () {
+                n = n + Math.random() * 10 | 0;
+                if (n > 100) {
+                    n = 100;
+                    $('#result').parent().show();
+                    clearInterval(timer);
+                }
+                element.progress('loading', n + '%');
+            }, 300 + Math.random() * 1000);
+            return false;
+        });
+
+        //工具栏事件
+        table.on('toolbar(result)', function (obj) {
+            var checkStatus = table.checkStatus(obj.config.id);
+            switch (obj.event) {
+
+                case 'download':
+                    layer.msg('下载中');
+                    window.open('/api/download');
+                    break;
+                case 'delete':
+                    break;
+            };
+        });
+    });
+</script>
+{% endblock %}
+{% block footer%}
+<div class="layui-footer footer footer-doc">
+    <div class="layui-main">
+        <p>© 2019 <a href="https://angr4mainyu.github.io">https://angr4mainyu.github.io</a> MIT license</p>
+        <p>
+            <a href="javascript:;" site-event="contactInfo">联系</a>
+            <a href="https://github.com/Angr4Mainyu" target="_blank" rel="nofollow">GitHub</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

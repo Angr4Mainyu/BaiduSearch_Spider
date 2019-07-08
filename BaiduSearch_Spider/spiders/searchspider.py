@@ -11,15 +11,20 @@ class BaiduspiderSpider(scrapy.Spider):
     count=0
     # allowed_domains = ['http://news.baidu.com/']
 
+    def __init__(self, keyword=None, search=None, *args, **kwargs):
+        super(BaiduspiderSpider, self).__init__(*args, **kwargs)
+        self.keyword = keyword
+        self.search = search
+
     def start_requests(self):
-        keyword="双鸭山"
+        # keyword="双鸭山"
         begin_page = 0
         end_page = 76
-        start_urls1 = "https://www.baidu.com/s?wd=%22%E5%8F%8C%E9%B8%AD%E5%B1%B1%22%20(%E4%B8%AD%E5%B1%B1%E5%A4%A7%E5%AD%A6)&pn={}&oq=%22%E5%8F%8C%E9%B8%AD%E5%B1%B1%22%20(%E4%B8%AD%E5%B1%B1%E5%A4%A7%E5%AD%A6)&tn=baiduadv&ie=utf-8&usm=1&rsv_pq=a2d05e1b00011aa3&rsv_t=0a5dGSMwxGbAMdlgZGZW%2F3p3LDtI0ZeS6zmvqogwaTML8EFfB1DqdRSHtCC8f50"
+        start_urls1 = "https://www.baidu.com/s?wd={})&pn={}&oq=%22%E5%8F%8C%E9%B8%AD%E5%B1%B1%22%20(%E4%B8%AD%E5%B1%B1%E5%A4%A7%E5%AD%A6)&tn=baiduadv&ie=utf-8&usm=1&rsv_pq=a2d05e1b00011aa3&rsv_t=0a5dGSMwxGbAMdlgZGZW%2F3p3LDtI0ZeS6zmvqogwaTML8EFfB1DqdRSHtCC8f50"
         for page in range(begin_page,end_page):# 一页链接数量由参数&rn=决定
-            U = start_urls1.format(page*10)  
+            U = start_urls1.format(self.search,page*10)  
             # sleep(0.5)  #设置一个翻页的时间，太快了不好
-            yield scrapy.Request(url = U,meta = {'keyword':keyword},callback = self.parse,dont_filter=True)
+            yield scrapy.Request(url = U,meta = {'keyword':self.keyword},callback = self.parse,dont_filter=True)
     
     def parse(self,response):
         list1 = response.xpath('//div[@class="result-op c-container xpath-log"]')

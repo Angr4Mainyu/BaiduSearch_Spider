@@ -15,7 +15,7 @@ class BaidusearchSpiderPipeline(object):
 class Pipeline_ToCSV(object):
     def __init__(self):
         #csv文件的位置,无需事先创建
-        store_file = os.path.dirname(__file__) + '/data/baidusearch_双鸭山.csv'
+        store_file = os.path.dirname(__file__) + '/data/baidusearch_{}.csv'.format('test')
         #打开(创建)文件
         self.file = open(store_file,'w',newline='',encoding='utf-8-sig') # 不带newline的话输出总会有一个空行 加入encoding='utf-8-sig'就不会乱码了
         #csv写法
