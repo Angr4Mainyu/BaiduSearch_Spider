@@ -7,7 +7,7 @@
 
 ## 爬虫使用方式
 
-```shell
+```shell   
 scrapy crawl searchspider -a search=xxxx -a keyword=xxxx
 ```
 
