@@ -1,0 +1,183 @@
+<!--
+ * @Description: In User Settings Edit
+ * @Author: your name
+ * @Date: 2019-07-16 00:32:12
+ * @LastEditTime: 2019-08-17 09:53:27
+ * @LastEditors: Please set LastEditors
+ -->
+{% extends 'base.html' %}
+{% block title %}{{title}}{% endblock %}
+{% block content %}
+<div class="site-content">
+    <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+        <legend>上传关键词文件</legend>
+    </fieldset>
+    <div class="layui-form-item">
+        <div class="layui-input-block">
+            <label class="layui-form-label">关键词集</label>
+            <div class="layui-upload-drag" id="file">
+                <i class="layui-icon"></i>
+                <p>点击上传，或将CSV文件拖拽到此处</p>
+            </div>
+        </div>
+    </div>
+    <form class="layui-form" action="" onclick="return false">
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <label class="layui-form-label">时间范围</label>
+                <div class="layui-input-block">
+                    <input type="text" name="time" class="layui-input" id="time_range" placeholder="-">
+                </div>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn layui-btn-disabled" disabled lay-submit lay-filter="search" id="search"><i
+                        class="layui-icon">&#xe62f;</i>网页榨取</button>
+                <button class="layui-btn layui-btn-disabled" disabled lay-submit lay-filter="news" id="news"><i
+                        class="layui-icon">&#xe62f;</i>新闻榨取</button>
+                <button type="reset" onclick="location.reload();" class="layui-btn layui-btn-primary"><i
+                        class="layui-icon">&#xe669;</i>重置</button>
+            </div>
+        </div>
+    </form>
+    <blockquote class="layui-elem-quote">
+        Tips：多个关键词之间是“或”关系的话使用 (关键词1|关键词2|关键词3|关键词4) 这种形式即可
+        <br> 多个关键词之间是“和”关系的话使用空格间隔。
+    </blockquote>
+    <div class='layui-anim layui-anim-up' style="display:none;">
+        <div class="layui-progress layui-progress-big" lay-showpercent="true" lay-filter="loading" width="80%px"
+            style="display:none">
+            <div class="layui-progress-bar layui-bg-orange" lay-percent="0%"></div>
+        </div>
+        <br>
+        <form class="layui-form" action="" onclick="return false">
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <input type="text" name="type" class="layui-input" style="display: none">
+                    <label class="layui-form-label">总进度</label>
+                    <div class="layui-input-inline" style="width: 100px;">
+                        <input type="text" name="count" placeholder="%" autocomplete="off" class="layui-input" disabled>
+                    </div>
+                    <div class="layui-form-mid">/</div>
+                    <div class="layui-input-inline" style="width: 100px;">
+                        <input type="text" name="total" placeholder="%" autocomplete="off" class="layui-input" disabled>
+                    </div>
+                    <button class="layui-btn" lay-submit lay-filter="download" id="download"><i
+                            class="layui-icon">&#xe601;</i>打包下载</button>
+                    <!-- <button type="reset" class="layui-btn layui-btn-primary"><i class="layui-icon">&#xe669;</i>重置</button> -->
+                </div>
+            </div>
+        </form>
+        <!-- <fieldset class="layui-elem-field layui-field-title">
+            <legend>结果</legend>
+        </fieldset> -->
+        <table class="layui-table" id="result" lay-filter="result"></table>
+        <span></span>
+    </div>
+</div>
+<script>
+    layui.use(['form', 'table', 'element', 'upload', 'layer', 'laydate'], function () {
+        var $ = layui.$,
+            form = layui.form,
+            table = layui.table,
+            element = layui.element,
+            laydate = layui.laydate,
+            upload = layui.upload;
+
+        //日期时间选择器
+        laydate.render({
+            elem: '#time_range',
+            type: 'datetime',
+            range: true
+        });
+
+        var uploadInst = upload.render({
+            elem: '#file' //绑定元素
+            , url: '/api/upload' //上传接口
+            , accept: 'file'
+            , exts: 'csv'
+            , done: function (res) {
+                console.log(res);
+                layer.msg(res.msg);
+                $('#search').removeClass('layui-btn-disabled');
+                $('#search').attr('disabled', false);
+                $('#news').removeClass('layui-btn-disabled');
+                $('#news').attr('disabled', false);
+            }
+            , error: function () {
+                //请求异常回调
+            }
+        });
+
+        $(document).on('click', '#download', function () {
+            var typ = $("input[name='type']").val();
+            window.open('/api/download_files?type=' + typ);
+        });
+
+        // 爬虫接口
+        function start() {
+            var typ = $("input[name='type']").val();
+            var time = $('#time_range').val();
+            $.get('/api/file_spider',
+                data = {
+                    type:typ,
+                    time:time
+                },
+                res => {
+                    total = res.count;
+                    $("input[name='total']").val(total);
+                    $('#result').parent().show();
+                    // 进度条效果
+                    var count = 0, timer = setInterval(function () {
+                        $.get('api/check_status?type=' + typ, res => {
+                            count = res.count;
+                            $("input[name='count']").val(count);
+                            if (count >= total) {
+                                count = total;
+                                clearInterval(timer);
+                            }
+                            element.progress('loading', count / total + '%');
+                        })
+                    }, 300 + Math.random() * 50000);
+                })
+        }
+
+        form.on("submit(search)", function (data) {
+            data = data.field;
+            $('.layui-progress').show();
+            $('#result').parent().hide();
+            console.log(data);
+            $("input[name='type']").val("search");
+            // 调用接口加载进行爬虫
+            start(data);
+
+            return false;
+        });
+
+        form.on("submit(news)", function (data) {
+            data = data.field;
+            $('.layui-progress').show();
+            $('#result').parent().hide();
+            console.log(data);
+            $("input[name='type']").val("news");
+            // 调用接口加载进行爬虫
+            start(data);
+
+            return false;
+        });
+    })
+</script>
+
+{% endblock %}
+{% block footer%}
+<div class="layui-footer footer footer-doc">
+    <div class="layui-main">
+        <p>© 2019 <a href="https://angr4mainyu.github.io">https://angr4mainyu.github.io</a> MIT license</p>
+        <p>
+            <a href="javascript:;" site-event="contactInfo">联系</a>
+            <a href="https://github.com/Angr4Mainyu" target="_blank" rel="nofollow">GitHub</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

@@ -2,29 +2,39 @@
 {% block title %}{{title}}{% endblock %}
 {% block content %}
 <div class="site-content">
-    <fieldset class="layui-elem-field layui-field-title">
+    <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
         <legend>搜索</legend>
-        <form class="layui-form" action="" onclick="return false">
-            <div class="layui-form-item">
+    </fieldset>
+    <form class="layui-form" action="" onclick="return false">
+        <div class="layui-form-item">
+            <div class="layui-input-block">
                 <label class="layui-form-label">关键词</label>
                 <div class="layui-input-block">
                     <input type="text" name="keyword" required lay-verify="required" placeholder="请输入关键词"
                         autocomplete="off" class="layui-input">
                 </div>
             </div>
-            <div class="layui-form-item">
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <label class="layui-form-label">时间范围</label>
                 <div class="layui-input-block">
-                    <button class="layui-btn" lay-submit lay-filter="search"><i
-                            class="layui-icon">&#xe615;</i>立即榨取</button>
-                    <button type="reset" class="layui-btn layui-btn-primary"><i
-                            class="layui-icon">&#xe669;</i>重置</button>
+                    <input type="text" name="time" class="layui-input" id="time_range" placeholder="-">
                 </div>
             </div>
-            <blockquote class="layui-elem-quote">
-                Tips：多个关键词之间是“或”关系的话使用 (关键词1|关键词2|关键词3|关键词4) 这种形式即可
-            </blockquote>
-        </form>
-    </fieldset>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn" lay-submit lay-filter="search"><i class="layui-icon">&#xe615;</i>网页榨取</button>
+                <button class="layui-btn" lay-submit lay-filter="news"><i class="layui-icon">&#xe615;</i>新闻榨取</button>
+                <button type="reset" onclick="location.reload();" class="layui-btn layui-btn-primary"><i
+                        class="layui-icon">&#xe669;</i>重置</button>
+            </div>
+        </div>
+        <blockquote class="layui-elem-quote">
+            Tips：多个关键词之间是“或”关系的话使用 (关键词1|关键词2|关键词3|关键词4) 这种形式即可
+        </blockquote>
+    </form>
     <div class="layui-progress layui-progress-big" lay-showpercent="true" lay-filter="loading" width="80%px"
         style="display:none">
         <div class="layui-progress-bar layui-bg-orange" lay-percent="0%"></div>
@@ -33,6 +43,7 @@
         <fieldset class="layui-elem-field layui-field-title">
             <legend>结果</legend>
         </fieldset>
+        <input type="text" name="type" class="layui-input" style="display: none">
         <table class="layui-table" id="result" lay-filter="result"></table>
         <span></span>
     </div>
@@ -44,19 +55,27 @@
   </script>
 
 <script>
-    layui.use(['form', 'table', 'element'], function () {
+    layui.use(['form', 'table', 'element', 'laydate'], function () {
         var form = layui.form,
             table = layui.table,
-            element = layui.element;
-        $ = layui.jquery;
+            element = layui.element,
+            laydate = layui.laydate,
+            $ = layui.jquery;
         form.render();
 
-        function reload(keyword) {
+        //日期时间选择器
+        laydate.render({
+            elem: '#time_range',
+            type: 'datetime',
+            range: true
+        });
+
+        function reload_search(keyword) {
             tableIns = table.render({
                 elem: '#result',
                 height: 'full',
                 title: '查询结果',
-                url: 'api/spider',
+                url: 'api/get_result',
                 id: 'result',
                 method: 'GET',
                 toolbar: '#toolbar',
@@ -80,25 +99,111 @@
             });
         }
 
+        function reload_news(keyword) {
+            tableIns = table.render({
+                elem: '#result',
+                height: 'full',
+                title: '查询结果',
+                url: 'api/get_result',
+                id: 'result',
+                method: 'GET',
+                toolbar: '#toolbar',
+                page: false,
+                where: keyword,
+                cols: [[
+                    {
+                        field: 'title', title: '标题', sort: true, templet: d => {
+                            return '<a href="' + d.link + '" class="layui-table-link" target="_blank">' + d.title + '</a>'
+                        }
+                    },
+                    { field: 'body', title: '正文', sort: true },
+                    { field: 'brief', title: '简介', sort: true },
+                    { field: 'date', title: '日期', sort: true },
+                    { field: 'time', title: '时间', sort: true },
+                    { field: 'platform', title: '平台', sort: true },
+                ]],
+                done: function (res, curr, count) {
+                    if (res.code == 1) {
+                        layer.msg(res["msg"]);
+                        return false;
+                    }
+                }
+            });
+        }
+
+        function spider_search(data){
+            $.get(
+                'api/search_spider',
+                data,
+                res=>{
+                    if(res.code == 0){
+                        layer.msg(res.msg);
+                    }else{
+                        layer.msg("Error")
+                    }
+                }
+            )
+        }
+
+        function spider_news(data){
+            $.get(
+                'api/news_spider',
+                data,
+                res=>{
+                    if(res.code == 0){
+                        layer.msg(res.msg);
+                    }else{
+                        layer.msg("Error")
+                    }
+                }
+            )
+        }
+
+
         form.on("submit(search)", function (data) {
             data = data.field;
             $('.layui-progress').show();
             $('#result').parent().hide();
             console.log(data);
-            // 加载结果
-            reload(data)
+            spider_search(data)
+            $("input[name='type']").val("search");
+            // 进度条效果
+            var n = 0, timer = setInterval(function () {
+                n = n + Math.random() * 5 | 0;
+                if (n > 100) {
+                    n = 100;
+                    // 加载结果
+                    reload_search(data)
+                    $('#result').parent().show();
+                    clearInterval(timer);
+                }
+                element.progress('loading', n + '%');
+            }, 2000 + Math.random() * 4000);
+            return false;
+        });
+
+        form.on("submit(news)", function (data) {
+            data = data.field;
+            $('.layui-progress').show();
+            $('#result').parent().hide();
+            console.log(data);
+            spider_news(data);
+            $("input[name='type']").val("news");
             // 进度条效果
             var n = 0, timer = setInterval(function () {
                 n = n + Math.random() * 10 | 0;
                 if (n > 100) {
                     n = 100;
+                    // 加载结果
+                    reload_news(data)
                     $('#result').parent().show();
                     clearInterval(timer);
                 }
                 element.progress('loading', n + '%');
-            }, 300 + Math.random() * 1000);
+            }, 2000 + Math.random() * 4000);
             return false;
         });
+
 
         //工具栏事件
         table.on('toolbar(result)', function (obj) {
@@ -107,7 +212,8 @@
 
                 case 'download':
                     layer.msg('下载中');
-                    window.open('/api/download');
+                    var typ = $("input[name='type']").val();
+                    window.open('/api/download?type=' + typ);
                     break;
                 case 'delete':
                     break;

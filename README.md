@@ -7,15 +7,31 @@
 
 ## 爬虫使用方式
 
+### 单个关键词
+
 ```shell   
-scrapy crawl searchspider -a search=xxxx -a keyword=xxxx
+scrapy crawl searchspider -a search=xxxx -a keyword=xxxx -a beg_time=xxx -a end_time=xxx
 ```
 
 或者
 
 ```shell
-scrapy crawl baiduspider -a search=xxxx -a keyword=xxxx
+scrapy crawl newsspider -a search=xxxx -a keyword=xxxx
 ```
+
+### 使用csv文件
+
+在下列路径中放置需要使用的csv文件
+
+`BaiduSearch_Spider\keyword`
+
+然后直接使用下列命令：
+
+```
+scrapy crawl searchspider
+```
+
+
 
 ## 网页界面启动方式
 
