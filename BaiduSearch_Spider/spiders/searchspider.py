@@ -2,7 +2,7 @@
 @Description: In User Settings Edit
 @Author: your name
 @Date: 2019-07-07 01:03:24
-@LastEditTime: 2019-08-20 22:49:54
+@LastEditTime: 2019-08-26 00:05:15
 @LastEditors: Please set LastEditors
 '''
 # -*- coding: utf-8 -*-
@@ -21,19 +21,20 @@ class BaiduspiderSpider(scrapy.Spider):
     count = 0
     # allowed_domains = ['http://news.baidu.com/']
 
-    def __init__(self, keyword=None, search=None, beg_time=None, end_time=None, * args, **kwargs):
+    def __init__(self, keyword=None, search=None, beg_time=None, end_time=None, user_id=None, * args, **kwargs):
         super(BaiduspiderSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword
         self.search = search
+        self.user_id = user_id
         self.beg_time = beg_time
         self.end_time = end_time
-        if self.keyword == None:  # 如果没有指定关键词，那么从文件中读取
+        if self.keyword == None and self.user_id != None:  # 如果没有指定关键词，那么从文件中读取
             self.ReadKeyword()
 
     def ReadKeyword(self):  # 设置要包含要搜索关键词的csv文件
         # 关键词csv文件的位置
         # filename = "高校学生自杀搜索关键词.csv"
-        filename = "keywords.csv"
+        filename = "keywords_{}.csv".format(self.user_id)
         path1 = os.path.dirname(__file__)  # 获取当前文件所在文件夹
         path2 = os.path.dirname(path1) + '/keyword/' + \
             filename  # 获取当前文件所在文件夹的父文件夹
@@ -62,7 +63,7 @@ class BaiduspiderSpider(scrapy.Spider):
                         self.beg_time, self.end_time)
                 for page in range(begin_page, end_page):  # 一页链接数量由参数&rn=决定
                     U = start_urls1.format(keyword, page*10)
-                    yield scrapy.Request(url=U, meta={'keyword': " ".join(line)}, callback=self.parse, dont_filter=True)
+                    yield scrapy.Request(url=U, meta={'keyword': "_".join(line), 'user_id': "" if self.user_id == None else self.user_id}, callback=self.parse, dont_filter=True)
                 sleep(1)  # 设置一个时间间隔，太快了不好
         else:
             begin_page = 0
@@ -70,17 +71,17 @@ class BaiduspiderSpider(scrapy.Spider):
             start_urls1 = "http://www.baidu.com/s?wd={})&pn={}&rn=10&ie=utf-8"
             if self.beg_time != None and self.end_time != None:
                 start_urls1 += '&gpc=stf%3D{}%2C{}'.format(
-                    self.beg_time, self.end_time) 
+                    self.beg_time, self.end_time)
             for page in range(begin_page, end_page):  # 一页链接数量由参数&rn=决定
                 U = start_urls1.format(self.search, page*10)
                 # sleep(0.5)  #设置一个翻页的时间，太快了不好
-                yield scrapy.Request(url=U, meta={'keyword': self.keyword}, callback=self.parse, dont_filter=True)
+                yield scrapy.Request(url=U, meta={'keyword': self.keyword, 'user_id': "" if self.user_id == None else self.user_id}, callback=self.parse, dont_filter=True)
 
     def parse(self, response):
         # 处理百度verify重定向问题  百度会限制单ip的爬取速率，所以遇到重定向到verify就延时一段时间再重新请求
         if response.status in [301, 302] and "verify" in response.url:
             sleep(1)  # 延时一段时间再重新请求
-            yield scrapy.Request(url=response.request.url, meta={'keyword': response.meta['keyword']}, callback=self.parse, dont_filter=True)
+            yield scrapy.Request(url=response.request.url, meta={'keyword': response.meta['keyword'],'user_id': "" if self.user_id == None else self.user_id}, callback=self.parse, dont_filter=True)
 
         list1 = response.xpath(
             '//div[@class="result-op c-container xpath-log"]')
@@ -88,6 +89,7 @@ class BaiduspiderSpider(scrapy.Spider):
         for section in list2:
             item = BaidusearchSpiderItem()
             item['keyword'] = response.meta['keyword']  # 标注关键词
+            item['user_id'] = response.meta['user_id']  # 标注用户
             item['number'] = self.count
             self.count += 1
             try:
@@ -130,6 +132,7 @@ class BaiduspiderSpider(scrapy.Spider):
             item['number'] = self.count
             self.count += 1
             item['keyword'] = response.meta['keyword']  # 标注关键词
+            item['user_id'] = response.meta['user_id']  # 标注用户
             try:
                 info = section.xpath('.//h3/a')[0]
                 item['link'] = info.xpath('@href').extract()[0]

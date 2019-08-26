@@ -2,7 +2,7 @@
  * @Description: In User Settings Edit
  * @Author: your name
  * @Date: 2019-07-16 00:32:12
- * @LastEditTime: 2019-08-17 09:53:27
+ * @LastEditTime: 2019-08-26 10:37:31
  * @LastEditors: Please set LastEditors
  -->
 {% extends 'base.html' %}
@@ -42,8 +42,15 @@
         </div>
     </form>
     <blockquote class="layui-elem-quote">
-        Tips：多个关键词之间是“或”关系的话使用 (关键词1|关键词2|关键词3|关键词4) 这种形式即可
-        <br> 多个关键词之间是“和”关系的话使用空格间隔。
+        Tips：
+        <br>多个关键词之间是“和”关系的话使用空格间隔。
+        <br>多个关键词之间是“或”关系的话使用 (关键词1|关键词2|关键词3|关键词4) 
+        <br>多个关键词之间是“非”关系的话使用 -(关键词1|关键词2|关键词3|关键词4)
+    </blockquote>
+    <blockquote class="layui-elem-quote">
+        例如：<br>
+        如果需要查询"中山大学"或者"武汉大学"学生"翘课"情况但是不想要包括"请假",那么搜索关键词可以按照如下书写:
+        <br>翘课 (中山大学|武汉大学) - (请假)
     </blockquote>
     <div class='layui-anim layui-anim-up' style="display:none;">
         <div class="layui-progress layui-progress-big" lay-showpercent="true" lay-filter="loading" width="80%px"
@@ -137,7 +144,7 @@
                                 count = total;
                                 clearInterval(timer);
                             }
-                            element.progress('loading', count / total + '%');
+                            element.progress('loading', count * 100 / total + '%');
                         })
                     }, 300 + Math.random() * 50000);
                 })

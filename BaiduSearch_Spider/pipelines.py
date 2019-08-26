@@ -1,3 +1,10 @@
+'''
+@Description: In User Settings Edit
+@Author: your name
+@Date: 2019-07-14 19:16:26
+@LastEditTime: 2019-08-25 23:38:17
+@LastEditors: Please set LastEditors
+'''
 # -*- coding: utf-8 -*-
 
 # Define your item pipelines here
@@ -20,7 +27,7 @@ class Pipeline_ToCSV(object):
     def __init__(self):
         # csv文件的位置,无需事先创建
         self.store_file = os.path.dirname(
-            __file__) + '/data/{0}data/baidu_{1}.csv'
+            __file__) + '/data/{0}data/{2}/baidu_{1}.csv'
         self.cur_keyword = ""
 
     def process_item(self, item, spider):
@@ -31,11 +38,11 @@ class Pipeline_ToCSV(object):
 
     def process_news_item(self, item, spider):
         if item['keyword'] != self.cur_keyword:  # 如果更换了关键词，就要打开另外一个文件中去读写
-            if not os.path.exists((self.store_file).format("news", item['keyword'])):
-                # 打开(创建)文件    
+            if not os.path.exists((self.store_file).format("news", item['keyword'], item['user_id'])):
+                # 打开(创建)文件
                 # 不带newline的话输出总会有一个空行 加入encoding='utf-8-sig'就不会乱码了
                 self.file = open((self.store_file).format(
-                    "news", item['keyword']), 'a', newline='', encoding='utf-8-sig')
+                    "news", item['keyword'], item['user_id']), 'a', newline='', encoding='utf-8-sig')
                 # csv写法
                 self.writer = csv.writer(self.file)
                 # 记录当前榨取的关键词
@@ -45,11 +52,12 @@ class Pipeline_ToCSV(object):
                               u'time', u'brief', u'body', u'link')
                 self.writer.writerow(head_index)
             elif self.cur_keyword == "":
-                os.remove((self.store_file).format("news", item['keyword']))
+                os.remove((self.store_file).format(
+                    "news", item['keyword'], item['user_id']))
                 # 打开(创建)文件
                 # 不带newline的话输出总会有一个空行 加入encoding='utf-8-sig'就不会乱码了
                 self.file = open((self.store_file).format(
-                    "news", item['keyword']), 'a', newline='', encoding='utf-8-sig')
+                    "news", item['keyword'], item['user_id']), 'a', newline='', encoding='utf-8-sig')
                 # csv写法
                 self.writer = csv.writer(self.file)
                 # 记录当前榨取的关键词
@@ -58,7 +66,7 @@ class Pipeline_ToCSV(object):
                 # 打开(创建)文件
                 # 不带newline的话输出总会有一个空行 加入encoding='utf-8-sig'就不会乱码了
                 self.file = open((self.store_file).format(
-                    "news", item['keyword']), 'a', newline='', encoding='utf-8-sig')
+                    "news", item['keyword'], item['user_id']), 'a', newline='', encoding='utf-8-sig')
                 # csv写法
                 self.writer = csv.writer(self.file)
                 # 记录当前榨取的关键词
@@ -82,11 +90,11 @@ class Pipeline_ToCSV(object):
     def process_search_item(self, item, spider):
         if item['keyword'] != self.cur_keyword:  # 如果更换了关键词，就要打开另外一个文件中取读写
             # 判断这个文件是否存在，如果不存在要加第一行索引
-            if not os.path.exists((self.store_file).format("search", item['keyword'])):
+            if not os.path.exists((self.store_file).format("search", item['keyword'], item['user_id'])):
                 # 打开(创建)文件
                 # 不带newline的话输出总会有一个空行 加入encoding='utf-8-sig'就不会乱码了
                 self.file = open((self.store_file).format(
-                    "search", item['keyword']), 'a', newline='', encoding='utf-8-sig')
+                    "search", item['keyword'], item['user_id']), 'a', newline='', encoding='utf-8-sig')
                 # csv写法
                 self.writer = csv.writer(self.file)
                 # 记录当前榨取的关键词
@@ -95,7 +103,8 @@ class Pipeline_ToCSV(object):
                 head_index = (u'title', u'time', u'brief', u'link')
                 self.writer.writerow(head_index)
             elif self.cur_keyword == "":
-                os.remove((self.store_file).format("search", item['keyword']))
+                os.remove((self.store_file).format(
+                    "search", item['keyword'], item['user_id']))
                 # 打开(创建)文件
                 # 不带newline的话输出总会有一个空行 加入encoding='utf-8-sig'就不会乱码了
                 self.file = open((self.store_file).format(
@@ -108,7 +117,7 @@ class Pipeline_ToCSV(object):
                 # 打开(创建)文件
                 # 不带newline的话输出总会有一个空行 加入encoding='utf-8-sig'就不会乱码了
                 self.file = open((self.store_file).format(
-                    "search", item['keyword']), 'a', newline='', encoding='utf-8-sig')
+                    "search", item['keyword'], item['user_id']), 'a', newline='', encoding='utf-8-sig')
                 # csv写法
                 self.writer = csv.writer(self.file)
                 # 记录当前榨取的关键词

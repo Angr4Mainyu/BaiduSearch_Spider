@@ -2,7 +2,7 @@
 @Description: In User Settings Edit
 @Author: your name
 @Date: 2019-07-07 01:33:36
-@LastEditTime: 2019-08-20 22:29:32
+@LastEditTime: 2019-08-26 10:18:42
 @LastEditors: Please set LastEditors
 '''
 # -*- coding:utf-8 -*-import re
@@ -11,6 +11,7 @@ import uuid
 import urllib
 from flask import Flask, session, request, render_template, Response, send_file, make_response
 import csv
+import shutil
 import zipfile
 import json
 import os
@@ -24,7 +25,7 @@ app.config['SECRET_KEY'] = str(random.random()*233)
 upload_path = "BaiduSearch_Spider/keyword/"
 filename = "keywords.csv"
 # cur_keyword = "死亡"
-
+cur_usr = 10000
 
 def datetime_to_stamp(date_time):
     """
@@ -56,13 +57,23 @@ def index():
     # session['username'] = 'www-data'
     if session == None:
         session['username'] = 'test-user'
+    if 'userID' not in session:
+        global cur_usr
+        cur_usr += 1
+        session['userID'] = str(cur_usr)
+    print(session)
     return render_template("index.html", title="百度信息榨取")
 
-
+# 多关键词文件查询页面
 @app.route('/multi_keyword')
 def multi_keyword():
     if session == None:
         session['username'] = 'test-user'
+    if 'userID' not in session:
+        global cur_usr
+        cur_usr += 1
+        session['userID'] = str(cur_usr)
+    print(session)
     return render_template("multi_keyword.html", title="百度信息榨取")
 
 
@@ -101,7 +112,7 @@ def search_spider():
     }
     return Response(json.dumps(res), content_type='application/json')
 
-
+# 打印结果的前20条供预览
 @app.route('/api/get_result', methods=['GET'])
 def get_result():
     keyword = session['keyword']
@@ -119,6 +130,7 @@ def get_result():
     return Response(json.dumps(res), content_type='application/json')
 
 
+# 爬取新闻的接口
 @app.route('/api/news_spider', methods=['GET', 'POST'])
 def news_spider():
     keyword = request.args.get("keyword")
@@ -139,15 +151,15 @@ def news_spider():
     }
     return Response(json.dumps(res), content_type='application/json')
 
-
+# 打包文件下载
 @app.route('/api/download_files', methods=['GET', 'POST'])
 def download_files():
     typ = request.args.get("type")
     if typ == "search":
-        output_path = "BaiduSearch_Spider/data/searchdata"
+        output_path = "BaiduSearch_Spider/data/searchdata/{}".format(session["userID"])
         file_name = 'baidu_search.csv'
     else:
-        output_path = "BaiduSearch_Spider/data/newsdata"
+        output_path = "BaiduSearch_Spider/data/newsdata/{}".format(session["userID"])
         file_name = 'baidu_news.csv'
     with zipfile.ZipFile('result.zip', 'w') as target:
         for i in os.walk(output_path):
@@ -162,7 +174,7 @@ def download_files():
         file_name)
     return res
 
-
+ 
 @app.route('/api/download')
 def download():
     typ = request.args.get("type")
@@ -180,13 +192,14 @@ def download():
     return res
 
 
+# 检查进度
 @app.route('/api/check_status', methods=['GET', 'POST'])
 def check_status():
     typ = request.args.get("type")
     if typ == "search":
-        output_path = "BaiduSearch_Spider/data/searchdata"
+        output_path = "BaiduSearch_Spider/data/searchdata/{}".format(session["userID"])
     else:
-        output_path = "BaiduSearch_Spider/data/newsdata"
+        output_path = "BaiduSearch_Spider/data/newsdata/{}".format(session["userID"])
     count = len(os.listdir(output_path))
     res = {
         'count': count,
@@ -200,13 +213,27 @@ def check_status():
 @app.route('/api/file_spider', methods=['GET', 'POST'])
 def file_spider():
     # 获取关键词的总数量
-    count = len(open(upload_path + filename, encoding='utf-8-sig').readlines())
+    filename = "keywords_{}.csv".format(session['userID'])
+    count = len(open(upload_path + filename, encoding='utf-8-sig').readlines()) - 1
     # 进行爬虫操作，由于文件比较大一般不可能等到爬完，所以新建一个线程进行爬取
     typ = request.args.get("type")
     if typ == "search":
-        cmd = "scrapy crawl searchspider"
+        cmd = 'scrapy crawl searchspider -a user_id="{}"'.format(session['userID'])
+        output_path = "BaiduSearch_Spider/data/searchdata/{}".format(session["userID"])
+        if os.path.exists(output_path):
+            shutil.rmtree(output_path)
+            os.mkdir(output_path)
+        else:
+            os.mkdir(output_path)
     else:
-        cmd = "scrapy crawl newsspider"
+        cmd = 'scrapy crawl newsspider -a user_id="{}"'.format(session['userID'])
+        output_path = "BaiduSearch_Spider/data/newsdata/{}".format(session["userID"])
+        if os.path.exists(output_path):
+            shutil.rmtree(output_path)
+            os.mkdir(output_path)
+        else:
+            os.mkdir(output_path)
+
     time_range = request.args.get("time")
     if time_range != "":
         time_range = time_range.split(' - ')
@@ -222,21 +249,29 @@ def file_spider():
     return Response(json.dumps(res), content_type='application/json')
 
 
+# 文件上传接口
 @app.route('/api/upload', methods=['GET', 'POST'])
 def upload():
-    # print(request.)
-    filename = "keywords.csv"
+    # print(request)
+    filename = "keywords_{}.csv".format(session['userID'])
     try:
         file = request.files['file']
         file.save(upload_path + filename)
-        res = {
-            'code': 0,
-            'msg': 'Upload success'
-        }
+        count = len(open(upload_path + filename, encoding='utf-8-sig').readlines()) - 1
+        if count > 500:
+            res = {
+                'code' : 0,
+                'msg' : '关键词过多,耗时会比较长</br>建议拆分成几个文件多次爬取'
+            }
+        else:
+            res = {
+                'code': 0,
+                'msg': '上传成功' 
+            }
     except:
         res = {
             'code': 1,
-            'msg': 'Upload failed'
+            'msg': '上传失败'
         }
     return Response(json.dumps(res), content_type='application/json')
 

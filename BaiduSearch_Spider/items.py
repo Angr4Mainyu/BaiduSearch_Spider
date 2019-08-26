@@ -1,3 +1,10 @@
+'''
+@Description: In User Settings Edit
+@Author: your name
+@Date: 2019-07-07 01:03:24
+@LastEditTime: 2019-08-25 23:58:37
+@LastEditors: Please set LastEditors
+'''
 # -*- coding: utf-8 -*-
 
 # Define here the models for your scraped items
@@ -18,6 +25,7 @@ class BaidunewsSpiderItem(scrapy.Item):
     time = Field() #发文时间
     link = Field() #发文的链接
     platform = Field() # 来源平台或者作者
+    user_id = Field() # 平台用户
 
 class BaidusearchSpiderItem(scrapy.Item):
     # define the fields for your item here like:
@@ -27,3 +35,4 @@ class BaidusearchSpiderItem(scrapy.Item):
     time = Field()# 时间
     brief = Field() # 简介内容
     link = Field() # 链接
+    user_id = Field() # 平台用户
